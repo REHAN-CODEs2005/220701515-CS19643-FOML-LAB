@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Insight Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 4rem;
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card {
+            border-radius: 16px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .card:hover {
+            transform: scale(1.02);
+        }
+
+        .chat-box {
+            height: 400px;
+            overflow-y: auto;
+            background: #fefefe;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            max-width: 75%;
+            display: inline-block;
+            word-wrap: break-word;
+        }
+
+        .chat-message.user {
+            background: #e6f0ff;
+            color: #004085;
+            text-align: right;
+            float: right;
+            clear: both;
+        }
+
+        .chat-message.bot {
+            background: #eaf7ea;
+            color: #155724;
+            float: left;
+            clear: both;
+        }
+
+        .tips-highlight {
+            background: linear-gradient(145deg, #fffde7, #fff9c4);
+            border-left: 6px solid #ffeb3b;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(255, 235, 59, 0.2);
+            font-size: 1.15rem;
+            line-height: 1.6;
+        }
+
+        .assistant-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #6c757d;
+        }
+
+        .btn-outline-success,
+        .btn-outline-primary {
+            border-radius: 50px;
+        }
+
+        /* Personalized Tips Section Enhancements */
+        .card-header.bg-warning {
+            background-color: #ff9800 !important;
+            color: white;
+        }
+
+        .tips-highlight p {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        /* Adding responsiveness to chat input and chat area */
+        @media (max-width: 768px) {
+            .chat-box {
+                height: 300px;
+            }
+
+            .chat-message {
+                max-width: 90%;
+            }
+
+            .tips-highlight {
+                font-size: 1rem;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top border-bottom shadow-sm py-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand fw-bold d-flex align-items-center text-primary" href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='1.png') }}" alt="Logo" width="30" height="30" class="me-2">
+                WellnessGuard <span class="text-warning">AI</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link text-dark me-3" href="{{ url_for('index') }}">🏠 Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary px-4 py-2 rounded-pill shadow-sm">
+                            📊 View Dashboard
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Upload Form -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                Upload Health Data (.CSV)
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <input type="file" class="form-control" name="file" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Analyze Health</button>
+                </form>
+            </div>
+        </div>
+
+        {% if report %}
+        <!-- Health Report -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                Health Analysis Report
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for key, value in report.items() %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <strong>{{ key }}</strong>
+                            <span>{{ value }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <a href="{{ url_for('download_report') }}" class="btn btn-outline-success mt-3">Download Report</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if tips %}
+        <!-- Personalized Health Tips -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark assistant-title">
+                🌿 Personalized Health Tips
+            </div>
+            <div class="card-body">
+                <div class="tips-highlight">
+                    {{ tips | safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if report %}
+        <!-- Chat Assistant -->
+        <div class="card mb-5">
+            <div class="card-header bg-primary text-white assistant-title">
+                🧠 Ask Your Health Coach Assistant
+            </div>
+            <div class="card-body">
+                <div class="chat-box mb-3" id="chat-box">
+                    <!-- Chat content will appear here -->
+                </div>
+                <form id="chat-form">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="user-input" placeholder="Ask a health-related question..." required>
+                        <button class="btn btn-success" type="submit">Send</button>
+                    </div>
+                </form>
+                <div class="mt-3 d-flex justify-content-between">
+                    <a href="{{ url_for('download_chat_log') }}" class="btn btn-outline-primary">Download Chat Log</a>
+                    <form method="POST" action="{{ url_for('clear_chat') }}">
+                        <button type="submit" class="btn btn-danger">Clear Chat</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Chat AJAX -->
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+
+        chatForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const userMessage = userInput.value.trim();
+            if (userMessage === '') return;
+
+            appendMessage('user', userMessage);
+            userInput.value = '';
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    'message': userMessage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage('bot', data.reply);
+            })
+            .catch(error => {
+                appendMessage('bot', '⚠️ Error communicating with server.');
+                console.error(error);
+            });
+        });
+
+        function appendMessage(sender, message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('chat-message', sender);
+            msgDiv.textContent = message;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>
